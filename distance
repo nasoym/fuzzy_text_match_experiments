@@ -1,0 +1,48 @@
+#!/bin/bash
+
+
+# :sed -n 1p 2016-11-10T12_logs.txt  | grep -o '\w\+' |  tr '[:upper
+# :]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u | vim -
+#
+# 2016-11-03T20-28_example_error_logs:sed -n 1p 2016-11-10T12_logs.txt  | grep -o '\w\+' |  tr '[:upper
+# :]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u | vim -
+
+
+[[ ! -t 0 ]] && STDIN="$(cat)"
+
+: ${COMPARE_FILE="$1"}
+
+FIRST_STDIN_LINE="$( echo "$STDIN" | sed -n 1p)"
+
+# echo "$FIRST_STDIN_LINE"
+
+STDIN_WORDS="$(echo "$FIRST_STDIN_LINE" | grep -o '\w\+' |  tr '[:upper:]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u )"
+STDIN_WORD_COUNT="$(echo "$STDIN_WORDS" | wc -l)"
+
+# echo "$STDIN_WORDS"
+
+COUNTER=1
+while read LINE; do
+  LINE_WORDS="$(echo "$LINE" | grep -o '\w\+' |  tr '[:upper:]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u )"
+  LINE_WORD_COUNT="$(echo "$LINE_WORDS" | wc -l)"
+  DIFF=$(diff <(echo "$LINE_WORDS") <(echo "$STDIN_WORDS") | diffstat -t | sed -n 2p | sed 's/,unknown$//g' | awk -F',' '{print $1+$2+$3}')
+  FACTOR="$(( DIFF * 100  / ( LINE_WORD_COUNT + STDIN_WORD_COUNT) ))"
+
+  # echo "$COUNTER: $FACTOR $DIFF $LINE_WORD_COUNT $STDIN_WORD_COUNT"
+  echo "$FACTOR $COUNTER"
+
+
+  # echo "$(( DIFF * 100  / ( LINE_WORD_COUNT + STDIN_WORD_COUNT) ))"
+
+  let "COUNTER++"
+done < $COMPARE_FILE
+
+# INSERTED,DELETED,MODIFIED,FILENAME
+# 123,171,0,unknown
+
+
+# echo "$COUNTER"
+
+
+
+
