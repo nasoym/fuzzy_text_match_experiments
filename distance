@@ -8,16 +8,52 @@
 # :]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u | vim -
 
 
-[[ ! -t 0 ]] && STDIN="$(cat)"
+[[ ! -t 0 ]] && INPUT_FILE="$(cat)"
 
 : ${COMPARE_FILE="$1"}
 
-FIRST_STDIN_LINE="$( echo "$STDIN" | sed -n 1p)"
+FIRST_STDIN_LINE="$( echo "$INPUT_FILE" | sed -n 1p)"
 
-# echo "$FIRST_STDIN_LINE"
+mkdir -p patterns
 
-STDIN_WORDS="$(echo "$FIRST_STDIN_LINE" | grep -o '\w\+' |  tr '[:upper:]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u )"
-STDIN_WORD_COUNT="$(echo "$STDIN_WORDS" | wc -l)"
+free_file_name() {
+  local COUNTER=1
+  until [[ ! -r patterns/$COUNTER ]];do
+    let "COUNTER++"
+  done
+  echo "$COUNTER"
+}
+
+while read LINE; do
+  STDIN_WORDS="$(echo "$LINE" | grep -o '\w\+' |  tr '[:upper:]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u )"
+  STDIN_WORD_COUNT="$(echo "$STDIN_WORDS" | wc -l)"
+
+  for FILE in $(find patterns -type f);do
+    # echo ">$FILE<"
+    PATTERN_LINE="$(sed -n 1p $FILE)"
+    LINE_WORDS="$(echo "$PATTERN_LINE" | grep -o '\w\+' |  tr '[:upper:]' '[:lower:]' | sed 's/\b[0-9]*\b//g' | sort -u )"
+    LINE_WORD_COUNT="$(echo "$LINE_WORDS" | wc -l)"
+    DIFF=$(diff <(echo "$LINE_WORDS") <(echo "$STDIN_WORDS") | diffstat -t | sed -n 2p | sed 's/,unknown$//g' | awk -F',' '{print $1+$2+$3}')
+    FACTOR="$(( DIFF * 100  / ( LINE_WORD_COUNT + STDIN_WORD_COUNT) ))"
+    echo "$FACTOR"
+
+    if [[ $FACTOR -le 5 ]];then
+      echo "matched append to: $FILE"
+      echo "$LINE" >> $FILE
+      LINE=""
+    fi
+
+  done
+  NEW_FILE_NAME="$(free_file_name)"
+  if [[ "$LINE" != "" ]];then
+    echo "create file: $NEW_FILE_NAME"
+    echo "$LINE" >> patterns/$NEW_FILE_NAME
+  fi
+
+
+done <<< "$INPUT_FILE"
+
+exit 0
 
 # echo "$STDIN_WORDS"
 
