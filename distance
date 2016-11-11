@@ -35,9 +35,9 @@ while read LINE; do
     LINE_WORD_COUNT="$(echo "$LINE_WORDS" | wc -l)"
     DIFF=$(diff <(echo "$LINE_WORDS") <(echo "$STDIN_WORDS") | diffstat -t | sed -n 2p | sed 's/,unknown$//g' | awk -F',' '{print $1+$2+$3}')
     FACTOR="$(( DIFF * 100  / ( LINE_WORD_COUNT + STDIN_WORD_COUNT) ))"
-    echo "$FACTOR"
+    # echo "$FACTOR"
 
-    if [[ $FACTOR -le 5 ]];then
+    if [[ $FACTOR -le 10 ]];then
       echo "matched append to: $FILE"
       echo "$LINE" >> $FILE
       LINE=""
